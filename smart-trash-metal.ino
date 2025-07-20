@@ -17,6 +17,9 @@ int metalDetected = 0;
 
 Servo servo;
 
+unsigned long detectedAt = 0;
+bool isWaitingConfirmation = false;
+
 void setup() {
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
@@ -57,29 +60,38 @@ void loop() {
   Serial.print("Metal Detected: ");
   Serial.println(metalDetected);
 
+  if (distance < 15) {
+    if (!isWaitingConfirmation) {
+      detectedAt = millis();
+      isWaitingConfirmation = true;
 
-  if (distance < 7) {
-    digitalWrite(redPin, LOW);
-    digitalWrite(yellowPin, HIGH);
-    digitalWrite(greenPin, LOW);
-    delay(350);
-    digitalWrite(redPin, HIGH);
-    digitalWrite(yellowPin, LOW);
-    digitalWrite(greenPin, LOW);
-
-    // Deteksi logam
-    if (metalDetected == HIGH) {
-      servo.write(45);
+      digitalWrite(redPin, LOW);
+      digitalWrite(yellowPin, HIGH);
+      digitalWrite(greenPin, LOW);
     } else {
-      servo.write(145);
+      if (millis() - detectedAt >= 3000) {
+        digitalWrite(redPin, HIGH);
+        digitalWrite(yellowPin, LOW);
+        digitalWrite(greenPin, LOW);
+
+        if (metalDetected == HIGH) {
+          servo.write(45);  // Arah logam
+        } else {
+          servo.write(145);  // Arah non-logam
+        }
+
+        digitalWrite(buzzerPin, HIGH);
+        delay(3500);
+
+        isWaitingConfirmation = false;
+        servo.write(servoDefaultWrite);
+        digitalWrite(buzzerPin, LOW);
+      }
     }
-
-    digitalWrite(buzzerPin, HIGH);
-    delay(3500);
-
   } else {
-    digitalWrite(buzzerPin, LOW);
+    isWaitingConfirmation = false;
     servo.write(servoDefaultWrite);
+    digitalWrite(buzzerPin, LOW);
     digitalWrite(redPin, LOW);
     digitalWrite(yellowPin, LOW);
     digitalWrite(greenPin, HIGH);
