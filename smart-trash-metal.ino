@@ -9,7 +9,7 @@ const int yellowPin = 7;
 const int greenPin = 8;
 const int metalPin = 9;
 
-const int servoDefaultWrite = 85;
+const int servoDefaultWrite = 80;
 
 long duration;
 int distance;
@@ -60,7 +60,7 @@ void loop() {
   Serial.print("Metal Detected: ");
   Serial.println(metalDetected);
 
-  if (distance < 15) {
+  if (distance < 14) {
     if (!isWaitingConfirmation) {
       detectedAt = millis();
       isWaitingConfirmation = true;
@@ -68,24 +68,24 @@ void loop() {
       digitalWrite(redPin, LOW);
       digitalWrite(yellowPin, HIGH);
       digitalWrite(greenPin, LOW);
+
+      digitalWrite(buzzerPin, HIGH);
     } else {
-      if (millis() - detectedAt >= 3000) {
+      if (millis() - detectedAt >= 2750) {
         digitalWrite(redPin, HIGH);
         digitalWrite(yellowPin, LOW);
         digitalWrite(greenPin, LOW);
 
         if (metalDetected == HIGH) {
-          servo.write(45);  // Arah logam
+          servo.write(35);  // Arah logam
         } else {
-          servo.write(145);  // Arah non-logam
+          servo.write(125);  // Arah non-logam
         }
 
-        digitalWrite(buzzerPin, HIGH);
         delay(3500);
 
         isWaitingConfirmation = false;
         servo.write(servoDefaultWrite);
-        digitalWrite(buzzerPin, LOW);
       }
     }
   } else {
