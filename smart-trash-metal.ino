@@ -6,9 +6,9 @@
 // ====== WIFI & TELEGRAM CONFIGURATION ======
 const char* ssid = "Bengkel_Rumahan";
 const char* password = "simulasitrash12_";
-const char* botToken = "8135508779:AAHES8ZAkWbhMbSlkjamZkHoVnM9T7bXbk4";
+const char* botToken = "";
 // ====== KONFIGURASI ID GRUP TELEGRAM ======
-const String chatIDGrup = "-4892930217";
+const String chatIDGrup = "";
 
 
 WiFiClientSecure secured_client;
