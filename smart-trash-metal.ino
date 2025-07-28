@@ -6,9 +6,9 @@
 // ====== WIFI & TELEGRAM CONFIGURATION ======
 const char* ssid = "Bengkel_Rumahan";
 const char* password = "simulasitrash12_";
-const char* botToken = "";
+const char* botToken = "8135508779:AAHES8ZAkWbhMbSlkjamZkHoVnM9T7bXbk4";
 // ====== KONFIGURASI ID GRUP TELEGRAM ======
-const String chatIDGrup = "";
+const String chatIDGrup = "-4892930217";
 
 
 WiFiClientSecure secured_client;
@@ -23,7 +23,7 @@ const int servoPin = 27;
 const int redPin = 26;
 const int yellowPin = 25;
 const int greenPin = 33;
-const int metalPin = 21;
+const int metalPin = 15;
 
 const int trigMetalPin = 17;    // Trigger Metal
 const int echoMetalPin = 5;     // Echo Metal
@@ -46,7 +46,7 @@ const int JARAK_MIN = 19.5;
 const int JARAK_MAX = 3.5;  // cm maksimum jarak tong (penuh)
 
 unsigned long waktuCekPesan = 0;
-const unsigned long intervalCekPesan = 3500;
+const unsigned long intervalCekPesan = 7500;
 
 bool sedangBuangSampah = false;
 unsigned long waktuBuangMulai = 0;
@@ -124,13 +124,12 @@ String buatBar(float jarak) {
 
 void cekPesanTelegram() {
   int jumlahPesan = bot.getUpdates(bot.last_message_received + 1);
-  while (jumlahPesan) {
+  if (jumlahPesan > 0) {
     for (int i = 0; i < jumlahPesan; i++) {
       String pesanMasuk = bot.messages[i].text;
       String idChat = String(bot.messages[i].chat_id);
       pesanMasuk.toLowerCase();
 
-      // Hanya izinkan command jika dikirim dari grup tertentu
       if (idChat != chatIDGrup) {
         bot.sendMessage(idChat, "❌ Command ini hanya bisa digunakan di grup yang terdaftar.", "");
         continue;
@@ -152,7 +151,6 @@ void cekPesanTelegram() {
         bot.sendMessage(idChat, status, "");
       }
     }
-    jumlahPesan = bot.getUpdates(bot.last_message_received + 1);
   }
 }
 
@@ -161,83 +159,85 @@ void cekPesanTelegram() {
 void loop() {
   if (!wifiTersambung) return;
 
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
+  static unsigned long lastLoop = 0;
+  if (millis() - lastLoop >= 350) {
+    lastLoop = millis();
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
 
-  duration = pulseIn(echoPin, HIGH);
-  distance = duration * 0.034 / 2;
+    duration = pulseIn(echoPin, HIGH, 30000);
+    distance = duration * 0.034 / 2;
 
-  Serial.print("Jarak : ");
-  Serial.print(distance);
-  Serial.println(" cm");
+    Serial.print("Jarak : ");
+    Serial.print(distance);
+    Serial.println(" cm");
 
-  metalDetected = digitalRead(metalPin);
-  Serial.print("Metal Detected: ");
-  Serial.println(metalDetected);
+    metalDetected = digitalRead(metalPin);
+    Serial.print("Metal Detected: ");
+    Serial.println(metalDetected);
 
-  if (distance < 14) {
-    if (!sedangBuangSampah && !isWaitingConfirmation) {
-      detectedAt = millis();
-      isWaitingConfirmation = true;
-      digitalWrite(redPin, LOW);
-      digitalWrite(yellowPin, HIGH);
-      digitalWrite(greenPin, LOW);
-      digitalWrite(buzzerPin, HIGH);
-    } else {
-      if (isWaitingConfirmation && millis() - detectedAt >= 1500 && !sedangBuangSampah) {
-        digitalWrite(redPin, HIGH);
-        digitalWrite(yellowPin, LOW);
+    if (distance < 14) {
+      if (!sedangBuangSampah && !isWaitingConfirmation) {
+        detectedAt = millis();
+        isWaitingConfirmation = true;
+        digitalWrite(redPin, LOW);
+        digitalWrite(yellowPin, HIGH);
         digitalWrite(greenPin, LOW);
+        digitalWrite(buzzerPin, HIGH);
+      } else {
+        if (isWaitingConfirmation && millis() - detectedAt >= 1500 && !sedangBuangSampah) {
+          digitalWrite(redPin, HIGH);
+          digitalWrite(yellowPin, LOW);
+          digitalWrite(greenPin, LOW);
 
-        if (metalDetected == HIGH) {
-          servo.write(35);
-          totalMetal++;
-        } else {
-          servo.write(125);
-          totalNonMetal++;
-        }
+          if (metalDetected == HIGH) {
+            servo.write(35);
+            totalMetal++;
+          } else {
+            servo.write(125);
+            totalNonMetal++;
+          }
 
-        // ---------------------------
-        String notif = "📦 Sampah baru terdeteksi!\n\n";
-        notif += (metalDetected == HIGH) ? "🗑️ Jenis: Metal\n" : "🧴 Jenis: Non-Metal\n";
-        notif += "📊 Total Metal: " + String(totalMetal) + "\n";
-        notif += "📊 Total Non-Metal: " + String(totalNonMetal) + "\n\n";
+          // ---------------------------
+          String notif = "📦 Sampah baru terdeteksi!\n\n";
+          notif += (metalDetected == HIGH) ? "🗑️ Jenis: Metal\n" : "🧴 Jenis: Non-Metal\n";
+          notif += "📊 Total Metal: " + String(totalMetal) + "\n";
+          notif += "📊 Total Non-Metal: " + String(totalNonMetal) + "\n\n";
 
-        // Tambahkan statistik volume
-        float jarakMetal = bacaJarak(trigMetalPin, echoMetalPin);
-        float jarakNonMetal = bacaJarak(trigNonMetalPin, echoNonMetalPin);
-        notif += "📦 Volume Saat Ini:\n";
-        notif += "🗑️ Metal: " + buatBar(jarakMetal) + "\n";
-        notif += "🧴 Non-Metal: " + buatBar(jarakNonMetal);
+          // Tambahkan statistik volume
+          float jarakMetal = bacaJarak(trigMetalPin, echoMetalPin);
+          float jarakNonMetal = bacaJarak(trigNonMetalPin, echoNonMetalPin);
+          notif += "📦 Volume Saat Ini:\n";
+          notif += "🗑️ Metal: " + buatBar(jarakMetal) + "\n";
+          notif += "🧴 Non-Metal: " + buatBar(jarakNonMetal);
 
-        bot.sendMessage(chatIDGrup, notif, "");
+          bot.sendMessage(chatIDGrup, notif, "");
 
-        // ---------------------------
+          // ---------------------------
 
-        if (sedangBuangSampah && millis() - waktuBuangMulai >= 3250) {
-          servo.write(servoDefaultWrite);
-          digitalWrite(buzzerPin, LOW);
-          sedangBuangSampah = false;
-          isWaitingConfirmation = false;
+          if (sedangBuangSampah && millis() - waktuBuangMulai >= 3250) {
+            servo.write(servoDefaultWrite);
+            digitalWrite(buzzerPin, LOW);
+            sedangBuangSampah = false;
+            isWaitingConfirmation = false;
+          }
         }
       }
+    } else {
+      isWaitingConfirmation = false;
+      servo.write(servoDefaultWrite);
+      digitalWrite(buzzerPin, LOW);
+      digitalWrite(redPin, LOW);
+      digitalWrite(yellowPin, LOW);
+      digitalWrite(greenPin, HIGH);
     }
-  } else {
-    isWaitingConfirmation = false;
-    servo.write(servoDefaultWrite);
-    digitalWrite(buzzerPin, LOW);
-    digitalWrite(redPin, LOW);
-    digitalWrite(yellowPin, LOW);
-    digitalWrite(greenPin, HIGH);
-  }
 
-  if (wifiTersambung && millis() - waktuCekPesan > intervalCekPesan) {
-    cekPesanTelegram();
-    waktuCekPesan = millis();
+    if (wifiTersambung && millis() - waktuCekPesan > intervalCekPesan) {
+      cekPesanTelegram();
+      waktuCekPesan = millis();
+    }
   }
-  
-  delay(350);
 }
